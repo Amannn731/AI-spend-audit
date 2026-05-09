@@ -1,67 +1,281 @@
-import Link from "next/link";
+"use client";
 
-export default function Home() {
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+
+const TOOLS = [
+  {
+    id: "cursor",
+    name: "Cursor",
+    plans: [
+      { id: "hobby", name: "Hobby", price: 0 },
+      { id: "pro", name: "Pro", price: 20 },
+      { id: "business", name: "Business", price: 40 },
+      { id: "enterprise", name: "Enterprise", price: 100 },
+    ],
+  },
+  {
+    id: "github_copilot",
+    name: "GitHub Copilot",
+    plans: [
+      { id: "individual", name: "Individual", price: 10 },
+      { id: "business", name: "Business", price: 19 },
+      { id: "enterprise", name: "Enterprise", price: 39 },
+    ],
+  },
+  {
+    id: "claude",
+    name: "Claude",
+    plans: [
+      { id: "free", name: "Free", price: 0 },
+      { id: "pro", name: "Pro", price: 20 },
+      { id: "max", name: "Max", price: 100 },
+      { id: "team", name: "Team", price: 30 },
+      { id: "enterprise", name: "Enterprise", price: 60 },
+    ],
+  },
+  {
+    id: "chatgpt",
+    name: "ChatGPT",
+    plans: [
+      { id: "free", name: "Free", price: 0 },
+      { id: "plus", name: "Plus", price: 20 },
+      { id: "team", name: "Team", price: 30 },
+      { id: "enterprise", name: "Enterprise", price: 60 },
+    ],
+  },
+  {
+    id: "anthropic_api",
+    name: "Anthropic API",
+    plans: [{ id: "pay_as_you_go", name: "Pay as you go", price: 0 }],
+  },
+  {
+    id: "openai_api",
+    name: "OpenAI API",
+    plans: [{ id: "pay_as_you_go", name: "Pay as you go", price: 0 }],
+  },
+  {
+    id: "gemini",
+    name: "Gemini",
+    plans: [
+      { id: "free", name: "Free", price: 0 },
+      { id: "pro", name: "Pro", price: 20 },
+      { id: "ultra", name: "Ultra", price: 30 },
+    ],
+  },
+  {
+    id: "windsurf",
+    name: "Windsurf",
+    plans: [
+      { id: "free", name: "Free", price: 0 },
+      { id: "pro", name: "Pro", price: 15 },
+      { id: "team", name: "Team", price: 35 },
+    ],
+  },
+];
+
+const USE_CASES = ["coding", "writing", "data", "research", "mixed"];
+
+interface ToolEntry {
+  toolId: string;
+  planId: string;
+  seats: number;
+  monthlySpend: number;
+}
+
+interface FormState {
+  tools: ToolEntry[];
+  teamSize: number;
+  useCase: string;
+}
+
+const DEFAULT_FORM: FormState = {
+  tools: [],
+  teamSize: 1,
+  useCase: "mixed",
+};
+
+export default function AuditPage() {
+  const router = useRouter();
+  const [form, setForm] = useState<FormState>(DEFAULT_FORM);
+  const [selectedTools, setSelectedTools] = useState<string[]>([]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("spendlens_form");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      setForm(parsed.form || DEFAULT_FORM);
+      setSelectedTools(parsed.selectedTools || []);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("spendlens_form", JSON.stringify({ form, selectedTools }));
+  }, [form, selectedTools]);
+
+  const toggleTool = (toolId: string) => {
+    if (selectedTools.includes(toolId)) {
+      setSelectedTools(selectedTools.filter((t) => t !== toolId));
+      setForm((f) => ({ ...f, tools: f.tools.filter((t) => t.toolId !== toolId) }));
+    } else {
+      setSelectedTools([...selectedTools, toolId]);
+      const tool = TOOLS.find((t) => t.id === toolId)!;
+      setForm((f) => ({
+        ...f,
+        tools: [...f.tools, { toolId, planId: tool.plans[0].id, seats: 1, monthlySpend: tool.plans[0].price }],
+      }));
+    }
+  };
+
+  const updateToolEntry = (toolId: string, field: keyof ToolEntry, value: string | number) => {
+    setForm((f) => ({
+      ...f,
+      tools: f.tools.map((t) => {
+        if (t.toolId !== toolId) return t;
+        if (field === "planId") {
+          const tool = TOOLS.find((tool) => tool.id === toolId)!;
+          const plan = tool.plans.find((p) => p.id === value)!;
+          return { ...t, planId: value as string, monthlySpend: plan.price * t.seats };
+        }
+        if (field === "seats") {
+          const tool = TOOLS.find((tool) => tool.id === toolId)!;
+          const plan = tool.plans.find((p) => p.id === t.planId)!;
+          return { ...t, seats: Number(value), monthlySpend: plan.price * Number(value) };
+        }
+        return { ...t, [field]: value };
+      }),
+    }));
+  };
+
+  const handleSubmit = () => {
+    if (selectedTools.length === 0) return;
+    localStorage.setItem("spendlens_audit_input", JSON.stringify(form));
+    router.push("/results");
+  };
+
   return (
     <main className="min-h-screen bg-black text-white">
       <nav className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-        <span className="text-xl font-bold text-emerald-400">SpendLens</span>
-        <Link href="/audit" className="bg-emerald-500 hover:bg-emerald-400 text-black font-semibold px-4 py-2 rounded-lg text-sm transition">
-          Start Free Audit →
-        </Link>
+        <a href="/" className="text-xl font-bold text-emerald-400">SpendLens</a>
+        <span className="text-white/40 text-sm">Free AI Spend Audit</span>
       </nav>
-      <section className="flex flex-col items-center justify-center text-center px-6 py-24 max-w-4xl mx-auto">
-        <span className="text-emerald-400 text-sm font-semibold uppercase tracking-widest mb-4">Free AI Spend Audit</span>
-        <h1 className="text-5xl md:text-6xl font-extrabold leading-tight mb-6">
-          You&apos;re probably overpaying<br />
-          <span className="text-emerald-400">for AI tools.</span>
-        </h1>
-        <p className="text-white/60 text-xl max-w-2xl mb-10">
-          SpendLens audits your AI tool stack in 2 minutes — Cursor, ChatGPT, Claude, Copilot, and more. See exactly where you&apos;re overspending and how much you could save.
-        </p>
-        <Link href="/audit" className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold px-8 py-4 rounded-xl text-lg transition shadow-lg shadow-emerald-500/20">
-          Audit My AI Spend — It&apos;s Free
-        </Link>
-        <p className="text-white/30 text-sm mt-4">No login required. Results in under 2 minutes.</p>
-      </section>
-      <section className="border-t border-white/10 py-20 px-6">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12">How it works</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              { step: "1", title: "Enter your tools", desc: "Tell us which AI tools you pay for, which plan, and how many seats." },
-              { step: "2", title: "Get your audit", desc: "Our engine compares your spend against every alternative and finds savings." },
-              { step: "3", title: "Save money", desc: "Follow the recommendations or book a free Credex consultation for bigger savings." },
-            ].map((item) => (
-              <div key={item.step} className="bg-white/5 rounded-2xl p-6 border border-white/10">
-                <div className="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center mb-4">{item.step}</div>
-                <h3 className="font-semibold text-lg mb-2">{item.title}</h3>
-                <p className="text-white/50 text-sm">{item.desc}</p>
-              </div>
-            ))}
+
+      <div className="max-w-3xl mx-auto px-6 py-12">
+        <h1 className="text-3xl font-bold mb-2">Audit your AI spend</h1>
+        <p className="text-white/50 mb-10">Select the tools you pay for and fill in your plan details.</p>
+
+        <div className="bg-white/5 rounded-2xl p-6 border border-white/10 mb-8">
+          <h2 className="font-semibold mb-4">About your team</h2>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm text-white/50 mb-1 block">Team size</label>
+              <input
+                type="number"
+                min={1}
+                value={form.teamSize}
+                onChange={(e) => setForm((f) => ({ ...f, teamSize: Number(e.target.value) }))}
+                className="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+            <div>
+              <label className="text-sm text-white/50 mb-1 block">Primary use case</label>
+              <select
+                value={form.useCase}
+                onChange={(e) => setForm((f) => ({ ...f, useCase: e.target.value }))}
+                className="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+              >
+                {USE_CASES.map((uc) => (
+                  <option key={uc} value={uc} className="bg-black">
+                    {uc.charAt(0).toUpperCase() + uc.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
-      </section>
-      <section className="border-t border-white/10 py-20 px-6">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl font-bold mb-4">Tools we audit</h2>
-          <p className="text-white/50 mb-10">All major AI tools with current pricing data</p>
-          <div className="flex flex-wrap justify-center gap-3">
-            {["Cursor", "GitHub Copilot", "Claude", "ChatGPT", "Anthropic API", "OpenAI API", "Gemini", "Windsurf"].map((tool) => (
-              <span key={tool} className="bg-white/5 border border-white/10 px-4 py-2 rounded-full text-sm text-white/70">{tool}</span>
-            ))}
-          </div>
+
+        <h2 className="font-semibold mb-4">Select your AI tools</h2>
+        <div className="flex flex-wrap gap-2 mb-8">
+          {TOOLS.map((tool) => (
+            <button
+              key={tool.id}
+              onClick={() => toggleTool(tool.id)}
+              className={`px-4 py-2 rounded-full border text-sm font-medium transition ${
+                selectedTools.includes(tool.id)
+                  ? "bg-emerald-500 border-emerald-500 text-black"
+                  : "bg-white/5 border-white/10 text-white/70 hover:border-white/30"
+              }`}
+            >
+              {tool.name}
+            </button>
+          ))}
         </div>
-      </section>
-      <section className="border-t border-white/10 py-20 px-6 text-center">
-        <h2 className="text-3xl font-bold mb-4">Find out how much you&apos;re wasting</h2>
-        <p className="text-white/50 mb-8">Takes 2 minutes. Completely free. No credit card.</p>
-        <Link href="/audit" className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold px-8 py-4 rounded-xl text-lg transition">
-          Start My Free Audit →
-        </Link>
-      </section>
-      <footer className="border-t border-white/10 py-8 px-6 text-center text-white/30 text-sm">
-        <p>SpendLens is a free tool by <a href="https://credex.rocks" className="text-emerald-400 hover:underline">Credex</a> — the marketplace for discounted AI credits.</p>
-      </footer>
+
+        {selectedTools.length > 0 && (
+          <div className="space-y-4 mb-10">
+            <h2 className="font-semibold">Plan details</h2>
+            {selectedTools.map((toolId) => {
+              const tool = TOOLS.find((t) => t.id === toolId)!;
+              const entry = form.tools.find((t) => t.toolId === toolId)!;
+              if (!entry) return null;
+              return (
+                <div key={toolId} className="bg-white/5 rounded-2xl p-5 border border-white/10">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="font-semibold">{tool.name}</span>
+                    <button onClick={() => toggleTool(toolId)} className="text-white/30 hover:text-white/60 text-sm">
+                      Remove
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-xs text-white/40 mb-1 block">Plan</label>
+                      <select
+                        value={entry.planId}
+                        onChange={(e) => updateToolEntry(toolId, "planId", e.target.value)}
+                        className="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                      >
+                        {tool.plans.map((plan) => (
+                          <option key={plan.id} value={plan.id} className="bg-black">
+                            {plan.name} — ${plan.price}/seat
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-white/40 mb-1 block">Seats</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={entry.seats}
+                        onChange={(e) => updateToolEntry(toolId, "seats", e.target.value)}
+                        className="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-white/40 mb-1 block">Monthly spend ($)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={entry.monthlySpend}
+                        onChange={(e) => updateToolEntry(toolId, "monthlySpend", e.target.value)}
+                        className="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <button
+          onClick={handleSubmit}
+          disabled={selectedTools.length === 0}
+          className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:bg-white/10 disabled:text-white/30 text-black font-bold py-4 rounded-xl text-lg transition"
+        >
+          {selectedTools.length === 0 ? "Select at least one tool to continue" : "Run My Audit →"}
+        </button>
+      </div>
     </main>
   );
 }
