@@ -158,9 +158,24 @@ export default function ResultsPage() {
   };
 
   const handleEmailSubmit = async () => {
-    if (!email) return;
-    setSubmitted(true);
-  };
+  if (!email) return;
+  try {
+    const res = await fetch('/api/leads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email,
+        totalSavings,
+        totalSpend,
+        honeypot: '',
+      }),
+    });
+    if (res.ok) setSubmitted(true);
+    else alert('Something went wrong. Try again.');
+  } catch {
+    alert('Something went wrong. Try again.');
+  }
+};
 
   const statusColor = (status: AuditResult["status"]) => {
     if (status === "overspending") return "text-red-400 bg-red-400/10 border-red-400/20";
